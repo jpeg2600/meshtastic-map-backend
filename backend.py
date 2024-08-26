@@ -283,10 +283,13 @@ def onReceive(packet, interface):  # pylint: disable=unused-argument
 
     elif portnum == "POSITION_APP":
         processPosition(packet["from"], packet["decoded"]["position"])
-        processPublicMessages(packet["from"], 
+        try:
+            processPublicMessages(packet["from"], 
                               'position', 
                               f'lat: {geoItoFloat(packet["decoded"]["position"]["latitudeI"])}, long: {geoItoFloat(packet["decoded"]["position"]["longitudeI"])}',
                               packet["mqtt"]["topic"])
+        except:
+            pass
 
 
     elif portnum == "TELEMETRY_APP":
@@ -295,7 +298,10 @@ def onReceive(packet, interface):  # pylint: disable=unused-argument
 
     elif portnum == "NODEINFO_APP":
         processTelemetry(packet["from"], packet["decoded"]["user"])
-        processPublicMessages(packet["from"], 'node_info', f'{packet["decoded"]["user"]["longName"]} ({packet["decoded"]["user"]["hwModel"]})', packet["mqtt"]["topic"])
+        try:
+            processPublicMessages(packet["from"], 'node_info', f'{packet["decoded"]["user"]["longName"]} ({packet["decoded"]["user"]["hwModel"]})', packet["mqtt"]["topic"])
+        except:
+            pass
 
     elif portnum == "NEIGHBORINFO_APP":
         processNeighbourInfo(packet["from"], packet["decoded"]["neighborinfo"])
