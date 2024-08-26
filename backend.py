@@ -44,11 +44,14 @@ parser.add_argument('--mqtt-pass', default="large4cats", help='Password of MQTT 
 parser.add_argument('--mqtt-topic', default="msh/TW/#", help='Topic to subscribe to MQTT')
 parser.add_argument('--mqtt-clientid', default="mesthastic-map-backend", help='MQTT client ID')
 parser.add_argument('--map-reports-only', default=True, help='Only use MQTT map reports to preserve privacy')
-parser.add_argument('--lastmessage', default=False, help='Store and share last messages from nodes')
+parser.add_argument('--public-messages', default=False, help='Store and share last messages from nodes')
+parser.add_argument('--messages-qty', default=10, help='Number of messages of any types to keep')
+
 
 cliargs = parser.parse_args()
 nodes = {}
 mynodes = []
+messages = []
 
 
 def cleanExit(sig, frame):
@@ -191,13 +194,19 @@ def processNeighbourInfo(pktfrom, data):
         nodes[data["nodeId"]].addNeighbour(neighbour["nodeId"], neighbour["snr"])
     logging.info("[NEIGHBOR ] %s" % nodes[pktfrom].getName())
 
+def processPublicMessages(pktfrom, type, data, topic=None):
+    if cliargs.public_messages:
+        messages.append({'name': nodes[pktfrom].name, 'type': type, 'message': data, 'topic': topic})
+        while len(messages) > int(cliargs.messages_qty):
+            messages.pop(0)
 
 def processTextMessage(pktfrom, pktto, data):
-    if cliargs.lastmessage:
+    if cliargs.public_messages:
         if pktfrom not in nodes.keys():
             nodes[pktfrom] = MapNode(pktfrom)
         nodes[pktfrom].setLastmessage(data)
-    logging.info("[TEXT] %d→%d %s" % (pktfrom, pktto, data))
+        
+    logging.info("[TEXT] %s → %d %s" % (nodes[pktfrom].name, pktto, data))
 
 def onReceiveMQTT(client, data, msg):
     se = mqtt_pb2.ServiceEnvelope()
@@ -249,7 +258,7 @@ def onReceiveMQTT(client, data, msg):
 
     except Exception as e:
         logging.debug(f"*** Failed to process MQTT Packet {str(e)}")
-
+    mpdict["mqtt"] = {'topic':msg.topic}
     onReceive(mpdict, None)
 
 
@@ -274,18 +283,29 @@ def onReceive(packet, interface):  # pylint: disable=unused-argument
 
     elif portnum == "POSITION_APP":
         processPosition(packet["from"], packet["decoded"]["position"])
+        processPublicMessages(packet["from"], 
+                              'position', 
+                              f'lat: {geoItoFloat(packet["decoded"]["position"]["latitudeI"])}, long: {geoItoFloat(packet["decoded"]["position"]["longitudeI"])}, alt: {packet["decoded"]["position"]["altitude"]}',
+                              packet["mqtt"]["topic"])
+
 
     elif portnum == "TELEMETRY_APP":
         processTelemetry(packet["from"], packet["decoded"]["telemetry"])
+        #processPublicMessages(packet["from"], 'telemetry', packet["decoded"]["telemetry"])
 
     elif portnum == "NODEINFO_APP":
         processTelemetry(packet["from"], packet["decoded"]["user"])
+        processPublicMessages(packet["from"], 'node_info', f'{packet["decoded"]["user"]["longName"]} ({packet["decoded"]["user"]["hwModel"]})')
 
     elif portnum == "NEIGHBORINFO_APP":
         processNeighbourInfo(packet["from"], packet["decoded"]["neighborinfo"])
+        #processPublicMessages(packet["from"], 'neighborinfo', packet["decoded"]["neighborinfo"])
+
 
     elif portnum == "TEXT_MESSAGE_APP":
         processTextMessage(packet["from"], packet["to"], packet["decoded"]["text"])
+        processPublicMessages(packet["from"], 'message', packet["decoded"]["text"], packet["mqtt"]["topic"])
+
 
     elif portnum == "ROUTING_APP":
         logging.info("[ROUTING ]")
@@ -356,7 +376,7 @@ def main():
     schedule.every(15).minutes.do(cleanData)
 
     # start geoJSON API
-    maprequesthandler.run_server(cliargs, nodes, mynodes)
+    maprequesthandler.run_server(cliargs, nodes, mynodes, messages)
 
     while True:
         schedule.run_pending()

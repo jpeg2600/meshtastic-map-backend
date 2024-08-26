@@ -6,16 +6,19 @@ import json
 
 class MapHTTPRequestHandler(BaseHTTPRequestHandler):
 
-    def __init__(self, cliargs, nodes, mynodes, *args, **kwargs):
+    def __init__(self, cliargs, nodes, mynodes, messages, *args, **kwargs):
         self.cliargs = cliargs
         self.nodes = nodes
         self.mappage = ""
         self.mynodes = mynodes
+        self.messages = messages
+
         with open('map.html', 'r') as file:
            self.mappage = Template(file.read()).render(latitude=cliargs.latitude,
                                                        longitude=cliargs.longitude,
                                                        zoom=cliargs.zoom,
-                                                       geojson=cliargs.geojson)
+                                                       geojson=cliargs.geojson,
+                                                       )
         super(MapHTTPRequestHandler, self).__init__(*args, **kwargs)
 
     def do_GET(self):
@@ -36,6 +39,16 @@ class MapHTTPRequestHandler(BaseHTTPRequestHandler):
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             self.wfile.write(self.nodesToJSON(multipoint=True).encode(encoding='utf_8'))
+        
+        elif self.path == '/messages':
+            # Set the referrer policy header
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.send_header('Referrer-Policy', 'no-referrer')  # Change 'no-referrer' to your desired policy
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(json.dumps(self.messages).encode(encoding='utf_8'))
+
         elif self.path[0:6] == '/links':
             # Set the referrer policy header
             self.send_response(200)
@@ -97,8 +110,8 @@ class MapHTTPRequestHandler(BaseHTTPRequestHandler):
 
 
 
-def run_server(cliargs, nodes, mynodes, port=8100):
+def run_server(cliargs, nodes, mynodes, messages, port=8100):
     server_address = ('', port)
-    httpd = HTTPServer(server_address, partial(MapHTTPRequestHandler, cliargs, nodes, mynodes))
+    httpd = HTTPServer(server_address, partial(MapHTTPRequestHandler, cliargs, nodes, mynodes, messages))
     logging.info(f'Starting server on port {port}...')
     httpd.serve_forever()
