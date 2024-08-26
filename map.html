@@ -59,20 +59,20 @@
         
 
   <div class="container-fluid overflow-hidden bg-dark bg-gradient vh-100 d-flex flex-column ">
-    <div class="row font-monospace text-success ">
+    <div class="row font-monospace text-success "  style="max-height: 20vh;">
       
-      <div class="col-lg-10 col-md-12">
+      <div class="col-lg-10 col-md-12" >
         <div class="card  bg-dark h-100 m-2 shadow">
           <div class="card-body ">
             <h4 class="card-title"><h3>Derniers messages</h3></h4>
             <div class="card-text table-responsive">
               <table class="table table-dark">
                 <thead>
-                  <tr>
-                    <th>topic</th>
-                    <th>Provenance</th>
-                    <th>Type</th>
-                    <th>Message</th>
+                  <tr class="d-flex">
+                    <th class="col-3">topic</th>
+                    <th class="col-1">Provenance</th>
+                    <th class="col-2">Type</th>
+                    <th class="col-6">Message</th>
                   </tr>
                 </thead>
                 <tbody id="messages">
@@ -238,7 +238,7 @@ $(document).ready(function() {
         $.get('{{geojson}}/messages', function(data) {
           let content = ''
           data.forEach((m) => {
-              content += `<tr><td>${m.topic}</td><td>${m.name}</td><td>${m.type}</td><td>${m.message}</td></tr>`
+              content += `<tr class="d-flex"><td class="col-3">${m.topic}</td><td class="col-1">${m.name}</td><td class="col-2">${m.type}</td><td class="col-6">${m.message}</td></tr>`
           });
           $('#messages').html(content);
         }).fail(function() {
