@@ -45,7 +45,7 @@ parser.add_argument('--mqtt-topic', default="msh/TW/#", help='Topic to subscribe
 parser.add_argument('--mqtt-clientid', default="mesthastic-map-backend", help='MQTT client ID')
 parser.add_argument('--map-reports-only', default=True, help='Only use MQTT map reports to preserve privacy')
 parser.add_argument('--public-messages', default=False, help='Store and share last messages from nodes')
-parser.add_argument('--messages-qty', default=10, help='Number of messages of any types to keep')
+parser.add_argument('--messages-qty', default=5, help='Number of messages of any types to keep')
 
 
 cliargs = parser.parse_args()
@@ -285,7 +285,7 @@ def onReceive(packet, interface):  # pylint: disable=unused-argument
         processPosition(packet["from"], packet["decoded"]["position"])
         processPublicMessages(packet["from"], 
                               'position', 
-                              f'lat: {geoItoFloat(packet["decoded"]["position"]["latitudeI"])}, long: {geoItoFloat(packet["decoded"]["position"]["longitudeI"])}, alt: {packet["decoded"]["position"]["altitude"]}',
+                              f'lat: {geoItoFloat(packet["decoded"]["position"]["latitudeI"])}, long: {geoItoFloat(packet["decoded"]["position"]["longitudeI"])}',
                               packet["mqtt"]["topic"])
 
 
@@ -295,7 +295,7 @@ def onReceive(packet, interface):  # pylint: disable=unused-argument
 
     elif portnum == "NODEINFO_APP":
         processTelemetry(packet["from"], packet["decoded"]["user"])
-        processPublicMessages(packet["from"], 'node_info', f'{packet["decoded"]["user"]["longName"]} ({packet["decoded"]["user"]["hwModel"]})')
+        processPublicMessages(packet["from"], 'node_info', f'{packet["decoded"]["user"]["longName"]} ({packet["decoded"]["user"]["hwModel"]})', packet["mqtt"]["topic"])
 
     elif portnum == "NEIGHBORINFO_APP":
         processNeighbourInfo(packet["from"], packet["decoded"]["neighborinfo"])
