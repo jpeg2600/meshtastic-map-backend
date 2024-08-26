@@ -1,5 +1,5 @@
 from flask import Flask, Response
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 from jinja2 import Template
 import logging
 import json
@@ -17,6 +17,8 @@ class MapRequestHandler:
         self.mynodes = mynodes
         self.messages = messages
         cors = CORS(self.app)
+        self.app.config['CORS_HEADERS'] = 'Content-Type'
+
         self.app.add_url_rule("/", 'index', self.debug_map)
         self.app.add_url_rule("/map", 'map', self.debug_map)
         self.app.add_url_rule("/multipoint", 'multipoint', self.multipoint_json)
@@ -37,31 +39,35 @@ class MapRequestHandler:
         r.headers.add('Referrer-Policy', 'no-referrer')
         r.headers.add('Access-Control-Allow-Origin', '*')
         return r
-
+    @cross_origin()
     def multipoint_json(self):
         r = Response(response=self.nodesToJSON(multipoint=True).encode(encoding='utf_8'), mimetype="application/json")
         r.headers.add('Referrer-Policy', 'no-referrer')
         r.headers.add('Access-Control-Allow-Origin', '*')
         return r
 
+    @cross_origin()
     def links_json(self):
         r = Response(response=self.neighboursToJSON().encode(encoding='utf_8'), mimetype="application/json")
         r.headers.add('Referrer-Policy', 'no-referrer')
         r.headers.add('Access-Control-Allow-Origin', '*')
         return r
 
+    @cross_origin()
     def nodes_json(self):
         r = Response(response=self.nodesToJSON().encode(encoding='utf_8'), mimetype="application/json")
         r.headers.add('Referrer-Policy', 'no-referrer')
         r.headers.add('Access-Control-Allow-Origin', '*')
         return r
     
+    @cross_origin()
     def messages_json(self):
         r = Response(response=json.dumps(self.messages).encode(encoding='utf_8'), mimetype="application/json")
         r.headers.add('Referrer-Policy', 'no-referrer')
         r.headers.add('Access-Control-Allow-Origin', '*')
         return r
 
+    @cross_origin()
     def nodesToJSON(self, multipoint=False):
         features = []
 
@@ -80,6 +86,7 @@ class MapRequestHandler:
         return json.dumps(features_json)
 
 
+    @cross_origin()
     def neighboursToJSON(self):
         features = []
 
