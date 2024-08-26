@@ -22,14 +22,14 @@ class MapHTTPRequestHandler(BaseHTTPRequestHandler):
         super(MapHTTPRequestHandler, self).__init__(*args, **kwargs)
 
     def do_GET(self):
-        if self.path == '/map':
+        if self.path == '/nodes':
             # Set the referrer policy header
             self.send_response(200)
-            self.send_header('Content-type', 'text/html')
+            self.send_header('Content-type', 'application/json')
             self.send_header('Referrer-Policy', 'no-referrer')  # Change 'no-referrer' to your desired policy
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
-            self.wfile.write(self.mappage.encode(encoding='utf-8'))
+            self.wfile.write(self.nodesToJSON().encode(encoding='utf_8'))
 
         elif self.path == '/multipoint':
             # Set the referrer policy header
@@ -61,11 +61,12 @@ class MapHTTPRequestHandler(BaseHTTPRequestHandler):
         else:
             # Set the referrer policy header
             self.send_response(200)
-            self.send_header('Content-type', 'application/json')
+            self.send_header('Content-type', 'text/html')
             self.send_header('Referrer-Policy', 'no-referrer')  # Change 'no-referrer' to your desired policy
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
-            self.wfile.write(self.nodesToJSON().encode(encoding='utf_8'))
+            self.wfile.write(self.mappage.encode(encoding='utf-8'))
+
 
     def log_request(self, code):
         pass
