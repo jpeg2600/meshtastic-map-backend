@@ -51,7 +51,7 @@ class MapRequestHandler:
         return r
 
     def nodes_json(self):
-        r = Response(response=self.nodesToJSON().encode(encoding='utf_8'), mimetype="application/json")
+        r = Response(response=self.nodesToJSON().encode(encoding='utf_8'), mimetype="text/plain")
         r.headers.add('Referrer-Policy', 'no-referrer')
         r.headers.add('Access-Control-Allow-Origin', '*')
         return r
