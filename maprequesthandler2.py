@@ -16,7 +16,7 @@ class MapRequestHandler:
         self.mappage = ""
         self.mynodes = mynodes
         self.messages = messages
-
+        cors = CORS(self.app)
         self.app.add_url_rule("/", 'index', self.debug_map)
         self.app.add_url_rule("/map", 'map', self.debug_map)
         self.app.add_url_rule("/multipoint", 'multipoint', self.multipoint_json)
