@@ -16,7 +16,7 @@ import signal
 import sys
 import time
 
-from maprequesthandler2 import MapRequestHandler
+from maprequesthandler import MapRequestHandler
 from mapnode import MapNode
 
 import meshtastic

@@ -1,75 +1,66 @@
-from functools import partial
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from flask import Flask, Response
+from flask_cors import CORS, cross_origin
 from jinja2 import Template
 import logging
 import json
 
-class MapHTTPRequestHandler(BaseHTTPRequestHandler):
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
+
+class MapRequestHandler:
 
     def __init__(self, cliargs, nodes, mynodes, messages, *args, **kwargs):
+        self.app = Flask(__name__)
         self.cliargs = cliargs
         self.nodes = nodes
         self.mappage = ""
         self.mynodes = mynodes
         self.messages = messages
 
+        self.app.add_url_rule("/", 'index', self.debug_map)
+        self.app.add_url_rule("/map", 'map', self.debug_map)
+        self.app.add_url_rule("/multipoint", 'multipoint', self.multipoint_json)
+        self.app.add_url_rule("/links", 'links', self.links_json)
+        self.app.add_url_rule("/nodes", 'nodes', self.nodes_json)
+        self.app.add_url_rule("/messages", 'messsages', self.messages_json)
         with open('map.html', 'r') as file:
            self.mappage = Template(file.read()).render(latitude=cliargs.latitude,
                                                        longitude=cliargs.longitude,
                                                        zoom=cliargs.zoom,
-                                                       geojson=cliargs.geojson,
-                                                       )
-        super(MapHTTPRequestHandler, self).__init__(*args, **kwargs)
+                                                       geojson=cliargs.geojson)
 
-    def do_GET(self):
-        if self.path == '/nodes':
-            # Set the referrer policy header
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.send_header('Referrer-Policy', 'no-referrer')  # Change 'no-referrer' to your desired policy
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            self.wfile.write(self.nodesToJSON().encode(encoding='utf_8'))
+    def getApp(self):
+        return self.app
 
-        elif self.path == '/multipoint':
-            # Set the referrer policy header
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.send_header('Referrer-Policy', 'no-referrer')  # Change 'no-referrer' to your desired policy
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            self.wfile.write(self.nodesToJSON(multipoint=True).encode(encoding='utf_8'))
-        
-        elif self.path == '/messages':
-            # Set the referrer policy header
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.send_header('Referrer-Policy', 'no-referrer')  # Change 'no-referrer' to your desired policy
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            self.wfile.write(json.dumps(self.messages).encode(encoding='utf_8'))
+    def debug_map(self):
+        r = Response(response=self.mappage.encode(encoding='utf-8'), mimetype="text/html")
+        r.headers.add('Referrer-Policy', 'no-referrer')
+        r.headers.add('Access-Control-Allow-Origin', '*')
+        return r
+    
+    def multipoint_json(self):
+        r = Response(response=self.nodesToJSON(multipoint=True).encode(encoding='utf_8'), mimetype="application/json")
+        r.headers.add('Referrer-Policy', 'no-referrer')
+        r.headers.add('Access-Control-Allow-Origin', '*')
+        return r
 
-        elif self.path[0:6] == '/links':
-            # Set the referrer policy header
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.send_header('Referrer-Policy', 'no-referrer')  # Change 'no-referrer' to your desired policy
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            self.wfile.write(self.neighboursToJSON().encode(encoding='utf_8'))
+    def links_json(self):
+        r = Response(response=self.neighboursToJSON().encode(encoding='utf_8'), mimetype="application/json")
+        r.headers.add('Referrer-Policy', 'no-referrer')
+        r.headers.add('Access-Control-Allow-Origin', '*')
+        return r
 
-        else:
-            # Set the referrer policy header
-            self.send_response(200)
-            self.send_header('Content-type', 'text/html')
-            self.send_header('Referrer-Policy', 'no-referrer')  # Change 'no-referrer' to your desired policy
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            self.wfile.write(self.mappage.encode(encoding='utf-8'))
-
-
-    def log_request(self, code):
-        pass
+    def nodes_json(self):
+        r = Response(response=self.nodesToJSON().encode(encoding='utf_8'), mimetype="application/json")
+        r.headers.add('Referrer-Policy', 'no-referrer')
+        r.headers.add('Access-Control-Allow-Origin', '*')
+        return r
+    
+    def messages_json(self):
+        r = Response(response=json.dumps(self.messages).encode(encoding='utf_8'), mimetype="application/json")
+        r.headers.add('Referrer-Policy', 'no-referrer')
+        r.headers.add('Access-Control-Allow-Origin', '*')
+        return r
 
     def nodesToJSON(self, multipoint=False):
         features = []
@@ -85,14 +76,12 @@ class MapHTTPRequestHandler(BaseHTTPRequestHandler):
             else:
                 features.append(self.nodes[node].toFeature(self.nodes))
 
-        features_json = {"type":"featureCollection", "features": features}
-        
+        features_json = {"type":"FeatureCollection", "features": features}
         return json.dumps(features_json)
 
 
     def neighboursToJSON(self):
         features = []
-        neighbours_found = False
 
         for node in self.nodes.keys():
             if self.cliargs.exclusive and node not in self.mynodes:
@@ -100,19 +89,11 @@ class MapHTTPRequestHandler(BaseHTTPRequestHandler):
             links  = self.nodes[node].getLinks(self.nodes)
             if len(links) > 0:
                 features.append(links)
-                neighbours_found = True
 
-        if neighbours_found is False:
-            features.append({})
-
-        features_json = {"type":"featureCollection", "features": features}
+        features_json = {"type":"FeatureCollection", "features": features}
 
         return json.dumps(features_json)
 
 
-
-def run_server(cliargs, nodes, mynodes, messages, port=8100):
-    server_address = ('', port)
-    httpd = HTTPServer(server_address, partial(MapHTTPRequestHandler, cliargs, nodes, mynodes, messages))
-    logging.info(f'Starting server on port {port}...')
-    httpd.serve_forever()
+    def run(self, host="0.0.0.0", port=8100):
+        self.app.run(host=host, port=port)
