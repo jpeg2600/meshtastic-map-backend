@@ -16,7 +16,7 @@ import signal
 import sys
 import time
 
-import maprequesthandler
+from maprequesthandler2 import MapRequestHandler
 from mapnode import MapNode
 
 import meshtastic
@@ -376,7 +376,11 @@ def main():
     schedule.every(15).minutes.do(cleanData)
 
     # start geoJSON API
-    maprequesthandler.run_server(cliargs, nodes, mynodes, messages)
+    mrh = MapRequestHandler(cliargs, nodes, mynodes, messages)
+    app = mrh.getApp()
+
+    mrh.run()
+
 
     while True:
         schedule.run_pending()
